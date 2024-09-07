@@ -1,0 +1,53 @@
+{
+	"name": "pipe_08_execute_pipeline",
+	"properties": {
+		"activities": [
+			{
+				"name": "pipe_getmetadata",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "pipe_params",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pipe_02_getmetadata",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "pipe_params",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pipe_07_params",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true,
+					"parameters": {
+						"param_valor": "60"
+					}
+				}
+			}
+		],
+		"folder": {
+			"name": "adf_activities"
+		},
+		"annotations": []
+	}
+}
