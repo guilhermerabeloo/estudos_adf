@@ -1161,6 +1161,204 @@
 			]
 		},
 		{
+			"name": "[concat(parameters('factoryName'), '/pipe_parquet_to_sql')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "get_dataparquet",
+						"type": "GetMetadata",
+						"dependsOn": [],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"dataset": {
+								"referenceName": "ds_dinamico_parquet",
+								"type": "DatasetReference",
+								"parameters": {
+									"containerName": "parquetfiles",
+									"fileName": "*"
+								}
+							},
+							"fieldList": [
+								"childItems"
+							],
+							"storeSettings": {
+								"type": "AzureBlobFSReadSettings",
+								"recursive": true,
+								"enablePartitionDiscovery": false
+							},
+							"formatSettings": {
+								"type": "ParquetReadSettings"
+							}
+						}
+					},
+					{
+						"name": "foreach_parquetfiles",
+						"type": "ForEach",
+						"dependsOn": [
+							{
+								"activity": "get_dataparquet",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('get_dataparquet').output.childItems",
+								"type": "Expression"
+							},
+							"activities": [
+								{
+									"name": "capy_to_sql",
+									"type": "Copy",
+									"dependsOn": [],
+									"policy": {
+										"timeout": "0.12:00:00",
+										"retry": 0,
+										"retryIntervalInSeconds": 30,
+										"secureOutput": false,
+										"secureInput": false
+									},
+									"userProperties": [],
+									"typeProperties": {
+										"source": {
+											"type": "ParquetSource",
+											"storeSettings": {
+												"type": "AzureBlobFSReadSettings",
+												"recursive": true,
+												"enablePartitionDiscovery": false
+											},
+											"formatSettings": {
+												"type": "ParquetReadSettings"
+											}
+										},
+										"sink": {
+											"type": "AzureSqlSink",
+											"writeBehavior": "insert",
+											"sqlWriterUseTableLock": false,
+											"tableOption": "autoCreate",
+											"disableMetricsCollection": false
+										},
+										"enableStaging": false,
+										"translator": {
+											"type": "TabularTranslator",
+											"typeConversion": true,
+											"typeConversionSettings": {
+												"allowDataTruncation": true,
+												"treatBooleanAsNumber": false
+											}
+										}
+									},
+									"inputs": [
+										{
+											"referenceName": "ds_dinamico_parquet",
+											"type": "DatasetReference",
+											"parameters": {
+												"containerName": "parquetfiles",
+												"fileName": {
+													"value": "@replace(item().name,'.parquet','')",
+													"type": "Expression"
+												}
+											}
+										}
+									],
+									"outputs": [
+										{
+											"referenceName": "ds_dinamico_azuresql",
+											"type": "DatasetReference",
+											"parameters": {
+												"schemaName": "dbo",
+												"tableName": {
+													"value": "@concat('parquetfile_',replace(item().name, '.parquet', ''))",
+													"type": "Expression"
+												}
+											}
+										}
+									]
+								}
+							]
+						}
+					},
+					{
+						"name": "remover_duplicadas_csvfiles",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "foreach_parquetfiles",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[remove_duplicadas_csvcor]"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_azuresql",
+							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "remover_duplicadas_cidades",
+						"type": "SqlServerStoredProcedure",
+						"dependsOn": [
+							{
+								"activity": "foreach_parquetfiles",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"timeout": "0.12:00:00",
+							"retry": 0,
+							"retryIntervalInSeconds": 30,
+							"secureOutput": false,
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"storedProcedureName": "[[dbo].[remove_duplicadas_cidades]"
+						},
+						"linkedServiceName": {
+							"referenceName": "ls_azuresql",
+							"type": "LinkedServiceReference"
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "hands_on_02"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/datasets/ds_dinamico_parquet')]",
+				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
+				"[concat(variables('factoryId'), '/datasets/ds_dinamico_azuresql')]"
+			]
+		},
+		{
 			"name": "[concat(parameters('factoryName'), '/ds_dinamico_azuresql')]",
 			"type": "Microsoft.DataFactory/factories/datasets",
 			"apiVersion": "2018-06-01",
@@ -1499,14 +1697,14 @@
 			"dependsOn": []
 		},
 		{
-			"name": "[concat(parameters('factoryName'), '/pipe_parquet_to_sql')]",
+			"name": "[concat(parameters('factoryName'), '/pipe_sql_to_parquet')]",
 			"type": "Microsoft.DataFactory/factories/pipelines",
 			"apiVersion": "2018-06-01",
 			"properties": {
 				"activities": [
 					{
-						"name": "get_dataparquet",
-						"type": "GetMetadata",
+						"name": "lookup_sql",
+						"type": "Lookup",
 						"dependsOn": [],
 						"policy": {
 							"timeout": "0.12:00:00",
@@ -1517,32 +1715,29 @@
 						},
 						"userProperties": [],
 						"typeProperties": {
+							"source": {
+								"type": "AzureSqlSource",
+								"sqlReaderQuery": "SELECT * FROM information_schema.tables\nwhere \n\ttable_schema = 'SalesLT' and table_type = 'BASE TABLE'",
+								"queryTimeout": "02:00:00",
+								"partitionOption": "None"
+							},
 							"dataset": {
-								"referenceName": "ds_dinamico_parquet",
+								"referenceName": "ds_dinamico_azuresql",
 								"type": "DatasetReference",
 								"parameters": {
-									"containerName": "parquetfiles",
-									"fileName": "*"
+									"schemaName": "SalesLT",
+									"tableName": "*"
 								}
 							},
-							"fieldList": [
-								"childItems"
-							],
-							"storeSettings": {
-								"type": "AzureBlobFSReadSettings",
-								"enablePartitionDiscovery": false
-							},
-							"formatSettings": {
-								"type": "ParquetReadSettings"
-							}
+							"firstRowOnly": false
 						}
 					},
 					{
-						"name": "foreach_parquetfiles",
+						"name": "foreach_table",
 						"type": "ForEach",
 						"dependsOn": [
 							{
-								"activity": "get_dataparquet",
+								"activity": "lookup_sql",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -1551,12 +1746,12 @@
 						"userProperties": [],
 						"typeProperties": {
 							"items": {
-								"value": "@activity('get_dataparquet').output.childItems",
+								"value": "@activity('lookup_sql').output.value",
 								"type": "Expression"
 							},
 							"activities": [
 								{
-									"name": "capy_to_sql",
+									"name": "sql_to_parquet",
 									"type": "Copy",
 									"dependsOn": [],
 									"policy": {
@@ -1569,22 +1764,18 @@
 									"userProperties": [],
 									"typeProperties": {
 										"source": {
-											"type": "ParquetSource",
-											"storeSettings": {
-												"type": "AzureBlobFSReadSettings",
-												"recursive": true,
-												"enablePartitionDiscovery": false
-											},
-											"formatSettings": {
-												"type": "ParquetReadSettings"
-											}
+											"type": "AzureSqlSource",
+											"queryTimeout": "02:00:00",
+											"partitionOption": "None"
 										},
 										"sink": {
-											"type": "AzureSqlSink",
-											"writeBehavior": "insert",
-											"sqlWriterUseTableLock": false,
-											"tableOption": "autoCreate",
-											"disableMetricsCollection": false
+											"type": "ParquetSink",
+											"storeSettings": {
+												"type": "AzureBlobFSWriteSettings"
+											},
+											"formatSettings": {
+												"type": "ParquetWriteSettings"
+											}
 										},
 										"enableStaging": false,
 										"translator": {
@@ -1598,12 +1789,15 @@
 									},
 									"inputs": [
 										{
-											"referenceName": "ds_dinamico_parquet",
+											"referenceName": "ds_dinamico_azuresql",
 											"type": "DatasetReference",
 											"parameters": {
-												"containerName": "parquetfiles",
-												"fileName": {
-													"value": "@replace(item().name,'.parquet','')",
+												"schemaName": {
+													"value": "@item().TABLE_SCHEMA",
+													"type": "Expression"
+												},
+												"tableName": {
+													"value": "@item().TABLE_NAME",
 													"type": "Expression"
 												}
 											}
@@ -1611,12 +1805,12 @@
 									],
 									"outputs": [
 										{
-											"referenceName": "ds_dinamico_azuresql",
+											"referenceName": "ds_dinamico_parquet",
 											"type": "DatasetReference",
 											"parameters": {
-												"schemaName": "dbo",
-												"tableName": {
-													"value": "@concat('parquetfile_',replace(item().name, '.parquet', ''))",
+												"containerName": "parquetfiles/TABLE_SQL",
+												"fileName": {
+													"value": "@item().TABLE_NAME",
 													"type": "Expression"
 												}
 											}
@@ -1625,74 +1819,19 @@
 								}
 							]
 						}
-					},
-					{
-						"name": "remover_duplicadas_csvfiles",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "foreach_parquetfiles",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[remove_duplicadas_csvcor]"
-						},
-						"linkedServiceName": {
-							"referenceName": "ls_azuresql",
-							"type": "LinkedServiceReference"
-						}
-					},
-					{
-						"name": "remover_duplicadas_cidades",
-						"type": "SqlServerStoredProcedure",
-						"dependsOn": [
-							{
-								"activity": "foreach_parquetfiles",
-								"dependencyConditions": [
-									"Succeeded"
-								]
-							}
-						],
-						"policy": {
-							"timeout": "0.12:00:00",
-							"retry": 0,
-							"retryIntervalInSeconds": 30,
-							"secureOutput": false,
-							"secureInput": false
-						},
-						"userProperties": [],
-						"typeProperties": {
-							"storedProcedureName": "[[dbo].[remove_duplicadas_cidades]"
-						},
-						"linkedServiceName": {
-							"referenceName": "ls_azuresql",
-							"type": "LinkedServiceReference"
-						}
 					}
 				],
 				"policy": {
 					"elapsedTimeMetric": {}
 				},
 				"folder": {
-					"name": "hands_on_02"
+					"name": "hands_on_03"
 				},
 				"annotations": []
 			},
 			"dependsOn": [
-				"[concat(variables('factoryId'), '/datasets/ds_dinamico_parquet')]",
-				"[concat(variables('factoryId'), '/linkedServices/ls_azuresql')]",
-				"[concat(variables('factoryId'), '/datasets/ds_dinamico_azuresql')]"
+				"[concat(variables('factoryId'), '/datasets/ds_dinamico_azuresql')]",
+				"[concat(variables('factoryId'), '/datasets/ds_dinamico_parquet')]"
 			]
 		}
 	]
