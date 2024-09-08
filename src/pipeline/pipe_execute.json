@@ -1,0 +1,73 @@
+{
+	"name": "pipe_execute",
+	"properties": {
+		"activities": [
+			{
+				"name": "exec_hands_on_01",
+				"type": "ExecutePipeline",
+				"dependsOn": [],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pipe_csv_to_parquet",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "exec_hands_on_02",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "exec_hands_on_01",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pipe_parquet_to_sql",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			},
+			{
+				"name": "exec_hands_on_03",
+				"type": "ExecutePipeline",
+				"dependsOn": [
+					{
+						"activity": "exec_hands_on_02",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"policy": {
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"pipeline": {
+						"referenceName": "pipe_sql_to_parquet",
+						"type": "PipelineReference"
+					},
+					"waitOnCompletion": true
+				}
+			}
+		],
+		"folder": {
+			"name": "hands_on_04"
+		},
+		"annotations": []
+	}
+}

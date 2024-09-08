@@ -28,6 +28,7 @@
 					],
 					"storeSettings": {
 						"type": "AzureBlobFSReadSettings",
+						"recursive": true,
 						"enablePartitionDiscovery": false
 					},
 					"formatSettings": {
@@ -40,7 +41,7 @@
 				"type": "ForEach",
 				"dependsOn": [
 					{
-						"activity": "get_dataparquet",
+						"activity": "filter_parquetfiles",
 						"dependencyConditions": [
 							"Succeeded"
 						]
@@ -49,7 +50,7 @@
 				"userProperties": [],
 				"typeProperties": {
 					"items": {
-						"value": "@activity('get_dataparquet').output.childItems",
+						"value": "@activity('filter_parquetfiles').output.value",
 						"type": "Expression"
 					},
 					"activities": [
@@ -176,6 +177,29 @@
 				"linkedServiceName": {
 					"referenceName": "ls_azuresql",
 					"type": "LinkedServiceReference"
+				}
+			},
+			{
+				"name": "filter_parquetfiles",
+				"type": "Filter",
+				"dependsOn": [
+					{
+						"activity": "get_dataparquet",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('get_dataparquet').output.childItems",
+						"type": "Expression"
+					},
+					"condition": {
+						"value": "@contains(item().type, 'File')",
+						"type": "Expression"
+					}
 				}
 			}
 		],
