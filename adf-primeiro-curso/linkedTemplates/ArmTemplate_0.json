@@ -1480,7 +1480,7 @@
 						"type": "ForEach",
 						"dependsOn": [
 							{
-								"activity": "get_dataparquet",
+								"activity": "filter_parquetfiles",
 								"dependencyConditions": [
 									"Succeeded"
 								]
@@ -1489,7 +1489,7 @@
 						"userProperties": [],
 						"typeProperties": {
 							"items": {
-								"value": "@activity('get_dataparquet').output.childItems",
+								"value": "@activity('filter_parquetfiles').output.value",
 								"type": "Expression"
 							},
 							"activities": [
@@ -1616,6 +1616,29 @@
 						"linkedServiceName": {
 							"referenceName": "ls_azuresql",
 							"type": "LinkedServiceReference"
+						}
+					},
+					{
+						"name": "filter_parquetfiles",
+						"type": "Filter",
+						"dependsOn": [
+							{
+								"activity": "get_dataparquet",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"userProperties": [],
+						"typeProperties": {
+							"items": {
+								"value": "@activity('get_dataparquet').output.childItems",
+								"type": "Expression"
+							},
+							"condition": {
+								"value": "@contains(item().type, 'File')",
+								"type": "Expression"
+							}
 						}
 					}
 				],
@@ -1832,6 +1855,92 @@
 			"dependsOn": [
 				"[concat(variables('factoryId'), '/pipelines/pipe_02_getmetadata')]",
 				"[concat(variables('factoryId'), '/pipelines/pipe_07_params')]"
+			]
+		},
+		{
+			"name": "[concat(parameters('factoryName'), '/pipe_execute')]",
+			"type": "Microsoft.DataFactory/factories/pipelines",
+			"apiVersion": "2018-06-01",
+			"properties": {
+				"activities": [
+					{
+						"name": "exec_hands_on_01",
+						"type": "ExecutePipeline",
+						"dependsOn": [],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pipe_csv_to_parquet",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "exec_hands_on_02",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "exec_hands_on_01",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pipe_parquet_to_sql",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					},
+					{
+						"name": "exec_hands_on_03",
+						"type": "ExecutePipeline",
+						"dependsOn": [
+							{
+								"activity": "exec_hands_on_02",
+								"dependencyConditions": [
+									"Succeeded"
+								]
+							}
+						],
+						"policy": {
+							"secureInput": false
+						},
+						"userProperties": [],
+						"typeProperties": {
+							"pipeline": {
+								"referenceName": "pipe_sql_to_parquet",
+								"type": "PipelineReference"
+							},
+							"waitOnCompletion": true,
+							"parameters": {}
+						}
+					}
+				],
+				"policy": {
+					"elapsedTimeMetric": {}
+				},
+				"folder": {
+					"name": "hands_on_04"
+				},
+				"annotations": []
+			},
+			"dependsOn": [
+				"[concat(variables('factoryId'), '/pipelines/pipe_csv_to_parquet')]",
+				"[concat(variables('factoryId'), '/pipelines/pipe_parquet_to_sql')]",
+				"[concat(variables('factoryId'), '/pipelines/pipe_sql_to_parquet')]"
 			]
 		}
 	]
