@@ -1,0 +1,25 @@
+{
+	"name": "tr_schedule",
+	"properties": {
+		"annotations": [],
+		"runtimeState": "Stopped",
+		"pipelines": [
+			{
+				"pipelineReference": {
+					"referenceName": "pipe_01_copydata",
+					"type": "PipelineReference"
+				}
+			}
+		],
+		"type": "ScheduleTrigger",
+		"typeProperties": {
+			"recurrence": {
+				"frequency": "Minute",
+				"interval": 1,
+				"startTime": "2024-09-12T00:37:00Z",
+				"endTime": "2024-09-13T00:35:00Z",
+				"timeZone": "UTC"
+			}
+		}
+	}
+}
